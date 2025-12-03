@@ -5,9 +5,8 @@ Provides a configuration class and loader with no hidden defaults.
 All configuration values must be explicitly provided.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 import json
 
 

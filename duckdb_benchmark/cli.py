@@ -5,6 +5,7 @@ Provides CLI entry point with explicit configuration requirement.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -94,7 +95,7 @@ def cmd_run(config_path: Path) -> int:
         config = load_config(config_path)
         benchmark = Benchmark(config)
         
-        results = benchmark.run()
+        benchmark.run()
         output_file = benchmark.save_results()
         
         print(f"Benchmark complete. Results saved to {output_file}")
@@ -109,8 +110,6 @@ def cmd_run(config_path: Path) -> int:
 
 def cmd_init(output_path: Path) -> int:
     """Create a sample configuration file."""
-    import json
-    
     sample_config = {
         "scale_factor": 1.0,
         "data_path": "./data",
