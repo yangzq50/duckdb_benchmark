@@ -5,19 +5,18 @@ Provides a configuration class and loader with no hidden defaults.
 All configuration values must be explicitly provided.
 """
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
-import json
 
 
 @dataclass
 class BenchmarkConfig:
     """
     Configuration for DuckDB TPC-H benchmarks.
-    
+
     All fields are required - no hidden defaults to ensure explicit configuration.
-    
+
     Attributes:
         scale_factor: TPC-H scale factor (e.g., 1, 10, 100)
         data_path: Path where TPC-H data files will be stored
@@ -31,15 +30,15 @@ class BenchmarkConfig:
     output_path: Path
     iterations: int
     queries: list[int]
-    tpch_extension_path: Optional[Path]
-    
+    tpch_extension_path: Path | None
+
     def __post_init__(self) -> None:
         """Validate and convert configuration values."""
         self.data_path = Path(self.data_path)
         self.output_path = Path(self.output_path)
         if self.tpch_extension_path is not None:
             self.tpch_extension_path = Path(self.tpch_extension_path)
-        
+
         # Validate types and values
         if not isinstance(self.scale_factor, (int, float)):
             raise TypeError("scale_factor must be a number")
@@ -63,26 +62,26 @@ class BenchmarkConfig:
 def load_config(config_path: Path) -> BenchmarkConfig:
     """
     Load benchmark configuration from a JSON file.
-    
+
     Args:
         config_path: Path to the JSON configuration file
-        
+
     Returns:
         BenchmarkConfig instance with loaded values
-        
+
     Raises:
         FileNotFoundError: If config file doesn't exist
         json.JSONDecodeError: If config file is not valid JSON
         TypeError: If required fields are missing
         ValueError: If field values are invalid
     """
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         data = json.load(f)
-    
+
     tpch_extension_path = data.get("tpch_extension_path")
     if tpch_extension_path is not None:
         tpch_extension_path = Path(tpch_extension_path)
-    
+
     return BenchmarkConfig(
         scale_factor=data["scale_factor"],
         data_path=Path(data["data_path"]),

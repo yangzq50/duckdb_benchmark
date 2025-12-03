@@ -8,9 +8,9 @@ output paths, query/iteration settings, and TPC-H extension loading.
 
 __version__ = "0.1.0"
 
+from duckdb_benchmark.benchmark import Benchmark
 from duckdb_benchmark.config import BenchmarkConfig, load_config
 from duckdb_benchmark.data_generator import DataGenerator
-from duckdb_benchmark.benchmark import Benchmark
 from duckdb_benchmark.load_tpch_extension import (
     download_tpch_extension,
     install_and_load_tpch,

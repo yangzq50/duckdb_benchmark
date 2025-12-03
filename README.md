@@ -144,11 +144,35 @@ duckdb_benchmark/
 
 ## Development
 
-Run tests:
+Install development dependencies:
+
+```bash
+pip install -e ".[dev]"
+```
+
+### Running Tests
 
 ```bash
 pytest tests/
 ```
+
+### Linting and Type Checking
+
+This project uses [ruff](https://github.com/astral-sh/ruff) for linting and [mypy](https://mypy.readthedocs.io/) for type checking.
+
+Run the linter:
+
+```bash
+ruff check .
+```
+
+Run the type checker:
+
+```bash
+mypy duckdb_benchmark tests
+```
+
+Both linting and type checking are enforced in CI and must pass for PRs to be merged.
 
 ## License
 
