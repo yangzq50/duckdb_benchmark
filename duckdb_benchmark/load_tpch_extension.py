@@ -6,10 +6,10 @@ the DuckDB TPC-H extension.
 """
 
 import gzip
+import platform as platform_module
 import shutil
 import urllib.request
 from pathlib import Path
-from typing import Optional
 
 import duckdb
 
@@ -59,11 +59,8 @@ def _get_platform() -> str:
     Returns:
         Platform identifier string (e.g., "linux_amd64", "osx_arm64")
     """
-    import platform
-    import sys
-
-    system = platform.system().lower()
-    machine = platform.machine().lower()
+    system = platform_module.system().lower()
+    machine = platform_module.machine().lower()
 
     # Map system names
     if system == "darwin":
@@ -83,7 +80,7 @@ def _get_platform() -> str:
 
 def _get_extension_download_url(
     duckdb_version: str,
-    platform: Optional[str] = None,
+    platform: str | None = None,
 ) -> str:
     """
     Get the download URL for the TPC-H extension.
@@ -107,8 +104,8 @@ def _get_extension_download_url(
 
 def download_tpch_extension(
     extension_path: Path,
-    duckdb_version: Optional[str] = None,
-    platform: Optional[str] = None,
+    duckdb_version: str | None = None,
+    platform: str | None = None,
 ) -> Path:
     """
     Download and uncompress the TPC-H extension.
@@ -156,8 +153,8 @@ def download_tpch_extension(
 
 def install_and_load_tpch(
     conn: duckdb.DuckDBPyConnection,
-    extension_path: Optional[Path] = None,
-    data_path: Optional[Path] = None,
+    extension_path: Path | None = None,
+    data_path: Path | None = None,
 ) -> None:
     """
     Install and load the TPC-H extension.

@@ -1,12 +1,11 @@
 """Tests for duckdb_benchmark.load_tpch_extension module."""
 
-import pytest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 import gzip
-import shutil
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import duckdb
+import pytest
 
 from duckdb_benchmark.load_tpch_extension import (
     _escape_sql_string,
@@ -96,7 +95,7 @@ class TestDownloadTpchExtension:
             def create_gz_file(url: str, path: str) -> None:
                 with gzip.open(path, "wb") as f:
                     f.write(test_content)
-            
+
             mock_retrieve.side_effect = create_gz_file
 
             result = download_tpch_extension(extension_path, "1.0.0")
@@ -109,7 +108,6 @@ class TestDownloadTpchExtension:
     def test_creates_parent_directory(self, tmp_path: Path) -> None:
         """Test that parent directory is created if it doesn't exist."""
         extension_path = tmp_path / "subdir" / "tpch.duckdb_extension"
-        gz_path = Path(str(extension_path) + ".gz")
 
         test_content = b"test content"
 
@@ -118,7 +116,7 @@ class TestDownloadTpchExtension:
                 Path(path).parent.mkdir(parents=True, exist_ok=True)
                 with gzip.open(path, "wb") as f:
                     f.write(test_content)
-            
+
             mock_retrieve.side_effect = create_gz_file
 
             result = download_tpch_extension(extension_path, "1.0.0")
