@@ -1,11 +1,13 @@
 """Tests for duckdb_benchmark.load_tpch_extension module."""
 
 import gzip
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import duckdb
 
+import duckdb_benchmark.load_tpch_extension  # noqa: F401
 from duckdb_benchmark.load_tpch_extension import (
     _download_tpch_extension,
     _escape_sql_string,
@@ -15,6 +17,9 @@ from duckdb_benchmark.load_tpch_extension import (
     _get_platform,
     load_tpch_extension,
 )
+
+# Get the module directly from sys.modules to enable patching internal functions
+load_tpch_ext_module = sys.modules["duckdb_benchmark.load_tpch_extension"]
 
 
 class TestEscapeSqlString:
@@ -89,7 +94,7 @@ class TestDownloadTpchExtension:
 
         # Mock urlretrieve to create the gz file
         test_content = b"test extension content"
-        with patch("duckdb_benchmark.load_tpch_extension.urllib.request.urlretrieve") as mock_retrieve:
+        with patch("urllib.request.urlretrieve") as mock_retrieve:
             def create_gz_file(url: str, path: str) -> None:
                 with gzip.open(path, "wb") as f:
                     f.write(test_content)
@@ -109,7 +114,7 @@ class TestDownloadTpchExtension:
 
         test_content = b"test content"
 
-        with patch("duckdb_benchmark.load_tpch_extension.urllib.request.urlretrieve") as mock_retrieve:
+        with patch("urllib.request.urlretrieve") as mock_retrieve:
             def create_gz_file(url: str, path: str) -> None:
                 Path(path).parent.mkdir(parents=True, exist_ok=True)
                 with gzip.open(path, "wb") as f:
@@ -127,7 +132,7 @@ class TestDownloadTpchExtension:
         extension_path = tmp_path / "tpch.duckdb_extension"
         test_content = b"test"
 
-        with patch("duckdb_benchmark.load_tpch_extension.urllib.request.urlretrieve") as mock_retrieve:
+        with patch("urllib.request.urlretrieve") as mock_retrieve:
             def create_gz_file(url: str, path: str) -> None:
                 assert f"v{duckdb.__version__}" in url
                 Path(path).parent.mkdir(parents=True, exist_ok=True)
@@ -184,7 +189,7 @@ class TestLoadTpchExtension:
         conn = MagicMock()
 
         # data_path is provided but default extension file doesn't exist
-        with patch("duckdb_benchmark.load_tpch_extension._download_tpch_extension") as mock_download:
+        with patch.object(load_tpch_ext_module, "_download_tpch_extension") as mock_download:
             # Make download create the file
             def create_file(path: Path) -> Path:
                 path.parent.mkdir(parents=True, exist_ok=True)
