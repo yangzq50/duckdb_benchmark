@@ -19,7 +19,7 @@ from .data_generator import (
     _format_scale_factor,
     _get_db_filename,
 )
-from .load_tpch_extension import load_tpch
+from .load_tpch_extension import load_tpch_extension
 
 
 @dataclass
@@ -85,7 +85,7 @@ class Benchmark:
         conn.execute(f"COPY FROM DATABASE {db_alias} TO memory;")
         conn.execute(f"DETACH {db_alias};")
 
-    def _load_tpch(self, conn: duckdb.DuckDBPyConnection) -> None:
+    def _load_tpch_extension(self, conn: duckdb.DuckDBPyConnection) -> None:
         """
         Load the TPC-H extension.
 
@@ -95,7 +95,7 @@ class Benchmark:
         Raises:
             duckdb.Error: If extension loading fails
         """
-        load_tpch(
+        load_tpch_extension(
             conn,
             extension_path=self.config.tpch_extension_path,
             data_path=self.config.data_path,
@@ -188,7 +188,7 @@ class Benchmark:
 
         try:
             # Load TPCH extension (needed for tpch_queries())
-            self._load_tpch(conn)
+            self._load_tpch_extension(conn)
 
             # Load data into memory
             self._load_data(conn)

@@ -11,11 +11,7 @@ __version__ = "0.1.0"
 from .benchmark import Benchmark
 from .config import BenchmarkConfig, load_config
 from .data_generator import DataGenerator
-from .load_tpch_extension import (
-    download_tpch_extension,
-    load_tpch,
-    load_tpch_extension_from_path,
-)
+from .load_tpch_extension import load_tpch_extension
 
 __all__ = [
     "__version__",
@@ -23,7 +19,5 @@ __all__ = [
     "load_config",
     "DataGenerator",
     "Benchmark",
-    "download_tpch_extension",
-    "load_tpch",
-    "load_tpch_extension_from_path",
+    "load_tpch_extension",
 ]

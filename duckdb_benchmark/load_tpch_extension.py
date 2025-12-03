@@ -102,7 +102,7 @@ def _get_extension_download_url(
     )
 
 
-def download_tpch_extension(
+def _download_tpch_extension(
     extension_path: Path,
     duckdb_version: str | None = None,
     platform: str | None = None,
@@ -151,7 +151,7 @@ def download_tpch_extension(
     return extension_path
 
 
-def load_tpch(
+def load_tpch_extension(
     conn: duckdb.DuckDBPyConnection,
     extension_path: Path | None = None,
     data_path: Path | None = None,
@@ -182,7 +182,7 @@ def load_tpch(
     if effective_path is not None:
         # Download if file doesn't exist
         if not effective_path.exists():
-            download_tpch_extension(effective_path)
+            _download_tpch_extension(effective_path)
         # Load directly from path
         escaped_path = _escape_sql_string(str(effective_path))
         conn.execute(f"LOAD '{escaped_path}';")
@@ -190,27 +190,3 @@ def load_tpch(
         # Use bundled extension: INSTALL + LOAD
         conn.execute("INSTALL tpch;")
         conn.execute("LOAD tpch;")
-
-
-def load_tpch_extension_from_path(
-    conn: duckdb.DuckDBPyConnection,
-    extension_path: Path,
-) -> None:
-    """
-    Load the TPC-H extension directly from a specific file path.
-
-    This uses LOAD with the full path rather than INSTALL + LOAD.
-
-    Args:
-        conn: DuckDB connection
-        extension_path: Path to the TPC-H extension file
-
-    Raises:
-        FileNotFoundError: If extension file doesn't exist
-        duckdb.Error: If loading fails
-    """
-    if not extension_path.exists():
-        raise FileNotFoundError(f"Extension file not found: {extension_path}")
-
-    escaped_path = _escape_sql_string(str(extension_path))
-    conn.execute(f"LOAD '{escaped_path}';")
