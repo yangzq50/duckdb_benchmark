@@ -6,6 +6,7 @@ the DuckDB TPC-H extension.
 """
 
 import gzip
+import platform as platform_module
 import shutil
 import urllib.request
 from pathlib import Path
@@ -58,10 +59,8 @@ def _get_platform() -> str:
     Returns:
         Platform identifier string (e.g., "linux_amd64", "osx_arm64")
     """
-    import platform
-
-    system = platform.system().lower()
-    machine = platform.machine().lower()
+    system = platform_module.system().lower()
+    machine = platform_module.machine().lower()
 
     # Map system names
     if system == "darwin":
