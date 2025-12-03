@@ -75,13 +75,13 @@ def cmd_generate(config_path: Path) -> int:
         generator = DataGenerator(config)
         
         if generator.data_exists():
-            print(f"Data already exists at {config.data_path}")
+            print(f"Data already exists at {generator.get_db_path()}")
             return 0
         
-        generator.generate()
-        print(f"Data generated at {config.data_path}")
+        db_path = generator.generate()
+        print(f"Data generated at {db_path}")
         return 0
-    except NotImplementedError as e:
+    except FileExistsError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
     except Exception as e:
@@ -95,12 +95,17 @@ def cmd_run(config_path: Path) -> int:
         config = load_config(config_path)
         benchmark = Benchmark(config)
         
-        benchmark.run()
-        output_file = benchmark.save_results()
+        print(f"Running TPC-H benchmark with scale factor {config.scale_factor}...")
+        results = benchmark.run()
         
-        print(f"Benchmark complete. Results saved to {output_file}")
+        # Print summary
+        success_count = sum(1 for r in results if r.success)
+        print(f"Executed {len(results)} query iterations ({success_count} successful)")
+        
+        output_file = benchmark.save_results()
+        print(f"Results saved to {output_file}")
         return 0
-    except NotImplementedError as e:
+    except FileNotFoundError as e:
         print(f"Error: {e}", file=sys.stderr)
         return 1
     except Exception as e:
@@ -116,8 +121,7 @@ def cmd_init(output_path: Path) -> int:
         "output_path": "./results",
         "iterations": 3,
         "queries": list(range(1, 23)),
-        "load_tpch_extension": True,
-        "in_memory": True,
+        "tpch_extension_path": None,
     }
     
     try:

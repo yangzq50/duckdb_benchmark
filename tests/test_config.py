@@ -18,8 +18,7 @@ class TestBenchmarkConfig:
             output_path=Path("./results"),
             iterations=3,
             queries=[1, 2, 3],
-            load_tpch_extension=True,
-            in_memory=True,
+            tpch_extension_path=None,
         )
         
         assert config.scale_factor == 1.0
@@ -27,8 +26,7 @@ class TestBenchmarkConfig:
         assert config.output_path == Path("./results")
         assert config.iterations == 3
         assert config.queries == [1, 2, 3]
-        assert config.load_tpch_extension is True
-        assert config.in_memory is True
+        assert config.tpch_extension_path is None
     
     def test_path_conversion(self) -> None:
         """Test that string paths are converted to Path objects."""
@@ -38,8 +36,7 @@ class TestBenchmarkConfig:
             output_path="./results",  # type: ignore
             iterations=1,
             queries=[1],
-            load_tpch_extension=True,
-            in_memory=True,
+            tpch_extension_path=None,
         )
         
         assert isinstance(config.data_path, Path)
@@ -54,8 +51,7 @@ class TestBenchmarkConfig:
                 output_path=Path("./results"),
                 iterations=1,
                 queries=[1],
-                load_tpch_extension=True,
-                in_memory=True,
+                tpch_extension_path=None,
             )
     
     def test_invalid_iterations_raises(self) -> None:
@@ -67,8 +63,7 @@ class TestBenchmarkConfig:
                 output_path=Path("./results"),
                 iterations=0,
                 queries=[1],
-                load_tpch_extension=True,
-                in_memory=True,
+                tpch_extension_path=None,
             )
     
     def test_empty_queries_raises(self) -> None:
@@ -80,8 +75,7 @@ class TestBenchmarkConfig:
                 output_path=Path("./results"),
                 iterations=1,
                 queries=[],
-                load_tpch_extension=True,
-                in_memory=True,
+                tpch_extension_path=None,
             )
     
     def test_invalid_query_number_raises(self) -> None:
@@ -93,9 +87,36 @@ class TestBenchmarkConfig:
                 output_path=Path("./results"),
                 iterations=1,
                 queries=[1, 23],
-                load_tpch_extension=True,
-                in_memory=True,
+                tpch_extension_path=None,
             )
+    
+    def test_invalid_tpch_extension_path_raises(self, tmp_path: Path) -> None:
+        """Test that non-existent tpch_extension_path raises ValueError."""
+        with pytest.raises(ValueError, match="tpch_extension_path does not exist"):
+            BenchmarkConfig(
+                scale_factor=1.0,
+                data_path=Path("./data"),
+                output_path=Path("./results"),
+                iterations=1,
+                queries=[1],
+                tpch_extension_path=tmp_path / "nonexistent" / "tpch.duckdb_extension",
+            )
+    
+    def test_valid_tpch_extension_path(self, tmp_path: Path) -> None:
+        """Test that valid tpch_extension_path is accepted."""
+        ext_file = tmp_path / "tpch.duckdb_extension"
+        ext_file.touch()
+        
+        config = BenchmarkConfig(
+            scale_factor=1.0,
+            data_path=Path("./data"),
+            output_path=Path("./results"),
+            iterations=1,
+            queries=[1],
+            tpch_extension_path=ext_file,
+        )
+        
+        assert config.tpch_extension_path == ext_file
 
 
 class TestLoadConfig:
@@ -109,8 +130,7 @@ class TestLoadConfig:
             "output_path": "./results",
             "iterations": 5,
             "queries": [1, 5, 10],
-            "load_tpch_extension": False,
-            "in_memory": False,
+            "tpch_extension_path": None,
         }
         
         config_file = tmp_path / "config.json"
@@ -122,7 +142,29 @@ class TestLoadConfig:
         assert config.scale_factor == 10.0
         assert config.iterations == 5
         assert config.queries == [1, 5, 10]
-        assert config.load_tpch_extension is False
+        assert config.tpch_extension_path is None
+    
+    def test_load_config_with_extension_path(self, tmp_path: Path) -> None:
+        """Test loading a configuration file with tpch_extension_path."""
+        ext_file = tmp_path / "tpch.duckdb_extension"
+        ext_file.touch()
+        
+        config_data = {
+            "scale_factor": 1.0,
+            "data_path": "./data",
+            "output_path": "./results",
+            "iterations": 1,
+            "queries": [1],
+            "tpch_extension_path": str(ext_file),
+        }
+        
+        config_file = tmp_path / "config.json"
+        with open(config_file, "w") as f:
+            json.dump(config_data, f)
+        
+        config = load_config(config_file)
+        
+        assert config.tpch_extension_path == ext_file
     
     def test_load_missing_file_raises(self) -> None:
         """Test that loading non-existent file raises FileNotFoundError."""
