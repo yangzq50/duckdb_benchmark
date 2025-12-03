@@ -52,25 +52,63 @@ def _get_duckdb_version() -> str:
     return duckdb.__version__
 
 
-def _get_extension_download_url(duckdb_version: str) -> str:
+def _get_platform() -> str:
+    """
+    Get the platform identifier for extension downloads.
+
+    Returns:
+        Platform identifier string (e.g., "linux_amd64", "osx_arm64")
+    """
+    import platform
+    import sys
+
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+
+    # Map system names
+    if system == "darwin":
+        system = "osx"
+
+    # Map architecture names
+    arch_map = {
+        "x86_64": "amd64",
+        "amd64": "amd64",
+        "aarch64": "arm64",
+        "arm64": "arm64",
+    }
+    arch = arch_map.get(machine, machine)
+
+    return f"{system}_{arch}"
+
+
+def _get_extension_download_url(
+    duckdb_version: str,
+    platform: Optional[str] = None,
+) -> str:
     """
     Get the download URL for the TPC-H extension.
 
     Args:
         duckdb_version: DuckDB version string
+        platform: Optional platform identifier (e.g., "linux_amd64")
+                  If not provided, auto-detected from the current system
 
     Returns:
         URL to download the TPC-H extension
     """
+    if platform is None:
+        platform = _get_platform()
+
     return (
         f"http://extensions.duckdb.org/v{duckdb_version}/"
-        "linux_amd64/tpch.duckdb_extension.gz"
+        f"{platform}/tpch.duckdb_extension.gz"
     )
 
 
 def download_tpch_extension(
     extension_path: Path,
     duckdb_version: Optional[str] = None,
+    platform: Optional[str] = None,
 ) -> Path:
     """
     Download and uncompress the TPC-H extension.
@@ -81,6 +119,8 @@ def download_tpch_extension(
     Args:
         extension_path: Path where the uncompressed extension will be saved
         duckdb_version: Optional DuckDB version; uses current version if not provided
+        platform: Optional platform identifier (e.g., "linux_amd64")
+                  If not provided, auto-detected from the current system
 
     Returns:
         Path to the downloaded and uncompressed extension file
@@ -92,13 +132,14 @@ def download_tpch_extension(
     if duckdb_version is None:
         duckdb_version = _get_duckdb_version()
 
-    url = _get_extension_download_url(duckdb_version)
+    url = _get_extension_download_url(duckdb_version, platform)
 
     # Ensure parent directory exists
     extension_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Download the compressed extension
-    gz_path = extension_path.with_suffix(".duckdb_extension.gz")
+    # Use string concatenation to ensure we add .gz suffix correctly
+    gz_path = Path(str(extension_path) + ".gz")
 
     urllib.request.urlretrieve(url, gz_path)
 

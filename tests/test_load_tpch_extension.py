@@ -13,6 +13,7 @@ from duckdb_benchmark.load_tpch_extension import (
     _get_default_extension_path,
     _get_duckdb_version,
     _get_extension_download_url,
+    _get_platform,
     download_tpch_extension,
     install_and_load_tpch,
     load_tpch_extension_from_path,
@@ -52,18 +53,33 @@ class TestGetDuckdbVersion:
         assert version == duckdb.__version__
 
 
+class TestGetPlatform:
+    """Tests for _get_platform function."""
+
+    def test_returns_string(self) -> None:
+        """Test that it returns a string."""
+        platform = _get_platform()
+        assert isinstance(platform, str)
+        assert "_" in platform  # Should be format like "linux_amd64"
+
+
 class TestGetExtensionDownloadUrl:
     """Tests for _get_extension_download_url function."""
 
     def test_returns_correct_url_format(self) -> None:
-        """Test that URL has correct format."""
-        url = _get_extension_download_url("1.0.0")
+        """Test that URL has correct format with explicit platform."""
+        url = _get_extension_download_url("1.0.0", "linux_amd64")
         assert url == "http://extensions.duckdb.org/v1.0.0/linux_amd64/tpch.duckdb_extension.gz"
 
     def test_url_includes_version(self) -> None:
         """Test that URL includes provided version."""
-        url = _get_extension_download_url("1.2.3")
+        url = _get_extension_download_url("1.2.3", "linux_amd64")
         assert "v1.2.3" in url
+
+    def test_url_includes_platform(self) -> None:
+        """Test that URL includes the specified platform."""
+        url = _get_extension_download_url("1.0.0", "osx_arm64")
+        assert "osx_arm64" in url
 
 
 class TestDownloadTpchExtension:
@@ -72,21 +88,16 @@ class TestDownloadTpchExtension:
     def test_downloads_and_extracts(self, tmp_path: Path) -> None:
         """Test downloading and extracting extension (mocked)."""
         extension_path = tmp_path / "tpch.duckdb_extension"
-        gz_path = extension_path.with_suffix(".duckdb_extension.gz")
+        gz_path = Path(str(extension_path) + ".gz")
 
-        # Create a mock compressed file
+        # Mock urlretrieve to create the gz file
         test_content = b"test extension content"
-        with gzip.open(gz_path, "wb") as f:
-            f.write(test_content)
-
-        # Mock urlretrieve to just "do nothing" since we already have the gz file
         with patch("duckdb_benchmark.load_tpch_extension.urllib.request.urlretrieve") as mock_retrieve:
-            mock_retrieve.side_effect = lambda url, path: None  # File already exists
+            def create_gz_file(url: str, path: str) -> None:
+                with gzip.open(path, "wb") as f:
+                    f.write(test_content)
             
-            # Pre-create the gz file since urlretrieve is mocked
-            tmp_path.mkdir(parents=True, exist_ok=True)
-            with gzip.open(gz_path, "wb") as f:
-                f.write(test_content)
+            mock_retrieve.side_effect = create_gz_file
 
             result = download_tpch_extension(extension_path, "1.0.0")
 
@@ -98,7 +109,7 @@ class TestDownloadTpchExtension:
     def test_creates_parent_directory(self, tmp_path: Path) -> None:
         """Test that parent directory is created if it doesn't exist."""
         extension_path = tmp_path / "subdir" / "tpch.duckdb_extension"
-        gz_path = extension_path.with_suffix(".duckdb_extension.gz")
+        gz_path = Path(str(extension_path) + ".gz")
 
         test_content = b"test content"
 
