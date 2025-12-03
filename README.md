@@ -5,7 +5,8 @@ A clean, decoupled Python module for running in-memory DuckDB TPC-H benchmarks.
 ## Features
 
 - **No hidden defaults**: All configuration must be explicitly provided
-- **Configurable**: Supports TPC-H data persistence, benchmark output paths, query/iteration settings
+- **Configurable**: Supports TPC-H data persistence, benchmark output paths, query/iteration settings, and custom extension paths
+- **In-memory only**: DuckDB always runs in memory; data is persisted to disk using ATTACH/COPY/DETACH
 - **Extensible**: Clear module structure ready for future features
 - **Portable**: Can be copied into other projects as a standalone module
 
@@ -21,6 +22,12 @@ For development:
 pip install -e ".[dev]"
 ```
 
+**Note**: Requires DuckDB. Install with:
+
+```bash
+pip install duckdb
+```
+
 ## Usage
 
 ### CLI
@@ -31,13 +38,13 @@ Create a sample configuration file:
 duckdb-benchmark init --output config.json
 ```
 
-Generate TPC-H data (not yet implemented):
+Generate TPC-H data:
 
 ```bash
 duckdb-benchmark generate --config config.json
 ```
 
-Run benchmarks (not yet implemented):
+Run benchmarks:
 
 ```bash
 duckdb-benchmark run --config config.json
@@ -55,13 +62,22 @@ config = BenchmarkConfig(
     output_path="./results",
     iterations=3,
     queries=[1, 5, 10, 15, 20],
-    load_tpch_extension=True,
-    in_memory=True,
+    tpch_extension_path=None,  # Uses bundled extension, or provide path
 )
 
-# Data generation and benchmarking (placeholders for future implementation)
+# Generate TPC-H data (persisted to disk)
 generator = DataGenerator(config)
+if not generator.data_exists():
+    db_path = generator.generate()
+    print(f"Data generated at {db_path}")
+
+# Run benchmarks (uses separate connection, data loaded into memory)
 benchmark = Benchmark(config)
+results = benchmark.run()
+
+# Save results
+output_file = benchmark.save_results()
+print(f"Results saved to {output_file}")
 ```
 
 ## Configuration
@@ -75,20 +91,45 @@ Configuration file format (JSON):
   "output_path": "./results",
   "iterations": 3,
   "queries": [1, 2, 3, 4, 5],
-  "load_tpch_extension": true,
-  "in_memory": true
+  "tpch_extension_path": null
 }
 ```
 
 | Field | Description |
 |-------|-------------|
-| `scale_factor` | TPC-H scale factor (e.g., 1, 10, 100) |
-| `data_path` | Directory for TPC-H data files |
+| `scale_factor` | TPC-H scale factor (e.g., 0.01, 1, 10, 100) |
+| `data_path` | Directory for TPC-H data files (database files with sf in name) |
 | `output_path` | Directory for benchmark results |
 | `iterations` | Number of iterations per query |
 | `queries` | List of TPC-H queries to run (1-22) |
-| `load_tpch_extension` | Whether to load DuckDB's TPC-H extension |
-| `in_memory` | Run DuckDB in memory-only mode |
+| `tpch_extension_path` | Optional path to custom TPC-H extension file; null uses bundled |
+
+## Architecture
+
+### Data Generation
+
+- DuckDB runs in-memory only
+- TPC-H extension is installed and loaded
+- Data is generated using `CALL dbgen(sf=N)`
+- Data is persisted using the ATTACH/COPY/DETACH pattern:
+  ```sql
+  ATTACH 'path/to/tpch_sfN.db' AS tpch_persist;
+  COPY FROM DATABASE memory TO tpch_persist;
+  DETACH tpch_persist;
+  ```
+
+### Benchmark Execution
+
+- Each benchmark run uses a separate DuckDB connection
+- Connection stays alive for the duration of one benchmark at one scale factor
+- Data is loaded into memory using:
+  ```sql
+  ATTACH 'path/to/tpch_sfN.db' AS tpch_source;
+  COPY FROM DATABASE tpch_source TO memory;
+  DETACH tpch_source;
+  ```
+- Queries are retrieved using `tpch_queries()` function
+- Execution time is measured for each query
 
 ## Module Structure
 
@@ -97,8 +138,8 @@ duckdb_benchmark/
 ├── __init__.py        # Module exports
 ├── cli.py             # CLI entry point
 ├── config.py          # Configuration loader
-├── data_generator.py  # TPC-H data generation (placeholder)
-└── benchmark.py       # Benchmarking logic (placeholder)
+├── data_generator.py  # TPC-H data generation
+└── benchmark.py       # Benchmarking logic
 ```
 
 ## Development

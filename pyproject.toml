@@ -22,6 +22,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 keywords = ["duckdb", "benchmark", "tpch", "database"]
+dependencies = [
+    "duckdb>=0.9.0",
+]
 
 [project.optional-dependencies]
 dev = [

@@ -4,7 +4,25 @@ import json
 import pytest
 from pathlib import Path
 
+import duckdb
+
 from duckdb_benchmark.cli import main, create_parser
+
+
+def tpch_extension_available() -> bool:
+    """Check if the TPCH extension can be installed."""
+    try:
+        conn = duckdb.connect(":memory:")
+        conn.execute("INSTALL tpch;")
+        conn.execute("LOAD tpch;")
+        conn.close()
+        return True
+    except Exception:
+        return False
+
+
+# Check once at module load
+TPCH_AVAILABLE = tpch_extension_available()
 
 
 class TestCLIParser:
@@ -66,21 +84,18 @@ class TestCLICommands:
         assert "output_path" in config
         assert "iterations" in config
         assert "queries" in config
-        assert "load_tpch_extension" in config
-        assert "in_memory" in config
+        assert "tpch_extension_path" in config
     
-    def test_generate_with_valid_config_returns_error_not_implemented(
-        self, tmp_path: Path
-    ) -> None:
-        """Test generate with valid config returns error (not implemented)."""
+    @pytest.mark.skipif(not TPCH_AVAILABLE, reason="TPCH extension not available")
+    def test_generate_creates_database(self, tmp_path: Path) -> None:
+        """Test generate with valid config creates database."""
         config_data = {
-            "scale_factor": 1.0,
+            "scale_factor": 0.01,
             "data_path": str(tmp_path / "data"),
             "output_path": str(tmp_path / "results"),
             "iterations": 1,
             "queries": [1],
-            "load_tpch_extension": True,
-            "in_memory": True,
+            "tpch_extension_path": None,
         }
         
         config_file = tmp_path / "config.json"
@@ -89,21 +104,47 @@ class TestCLICommands:
         
         result = main(["generate", "--config", str(config_file)])
         
-        # Should return 1 because generation is not implemented
-        assert result == 1
+        assert result == 0
+        assert (tmp_path / "data" / "tpch_sf0_01.db").exists()
     
-    def test_run_with_valid_config_returns_error_not_implemented(
-        self, tmp_path: Path
+    def test_generate_skips_if_exists(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        """Test run with valid config returns error (not implemented)."""
+        """Test generate skips if data already exists."""
+        data_dir = tmp_path / "data"
+        data_dir.mkdir(parents=True)
+        (data_dir / "tpch_sf0_01.db").touch()
+        
         config_data = {
-            "scale_factor": 1.0,
+            "scale_factor": 0.01,
+            "data_path": str(data_dir),
+            "output_path": str(tmp_path / "results"),
+            "iterations": 1,
+            "queries": [1],
+            "tpch_extension_path": None,
+        }
+        
+        config_file = tmp_path / "config.json"
+        with open(config_file, "w") as f:
+            json.dump(config_data, f)
+        
+        result = main(["generate", "--config", str(config_file)])
+        
+        assert result == 0
+        captured = capsys.readouterr()
+        assert "already exists" in captured.out
+    
+    def test_run_without_data_returns_error(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Test run returns error when data doesn't exist."""
+        config_data = {
+            "scale_factor": 0.01,
             "data_path": str(tmp_path / "data"),
             "output_path": str(tmp_path / "results"),
             "iterations": 1,
             "queries": [1],
-            "load_tpch_extension": True,
-            "in_memory": True,
+            "tpch_extension_path": None,
         }
         
         config_file = tmp_path / "config.json"
@@ -112,8 +153,9 @@ class TestCLICommands:
         
         result = main(["run", "--config", str(config_file)])
         
-        # Should return 1 because benchmark is not implemented
         assert result == 1
+        captured = capsys.readouterr()
+        assert "Error" in captured.err
     
     def test_generate_with_invalid_config_returns_error(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
