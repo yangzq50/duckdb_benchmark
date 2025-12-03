@@ -19,6 +19,7 @@ from duckdb_benchmark.data_generator import (
     _escape_sql_string,
     _format_scale_factor,
 )
+from duckdb_benchmark.load_tpch_extension import install_and_load_tpch
 
 
 @dataclass
@@ -94,15 +95,11 @@ class Benchmark:
         Raises:
             duckdb.Error: If extension installation or loading fails
         """
-        # Install extension if not installed (uses custom path if provided)
-        if self.config.tpch_extension_path is not None:
-            escaped_path = _escape_sql_string(str(self.config.tpch_extension_path.parent))
-            conn.execute(f"INSTALL tpch FROM '{escaped_path}';")
-        else:
-            conn.execute("INSTALL tpch;")
-        
-        # Load extension (always load)
-        conn.execute("LOAD tpch;")
+        install_and_load_tpch(
+            conn,
+            extension_path=self.config.tpch_extension_path,
+            data_path=self.config.data_path,
+        )
     
     def _execute_query(
         self, conn: duckdb.DuckDBPyConnection, query_number: int, iteration: int
