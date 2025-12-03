@@ -14,7 +14,7 @@ from typing import Optional
 import duckdb
 
 from duckdb_benchmark.config import BenchmarkConfig
-from duckdb_benchmark.data_generator import _get_db_filename
+from duckdb_benchmark.data_generator import _get_db_filename, _escape_sql_string
 
 
 @dataclass
@@ -75,7 +75,8 @@ class Benchmark:
         
         # Load data using ATTACH/COPY/DETACH pattern
         db_alias = "tpch_source"
-        conn.execute(f"ATTACH '{db_path}' AS {db_alias};")
+        escaped_db_path = _escape_sql_string(str(db_path))
+        conn.execute(f"ATTACH '{escaped_db_path}' AS {db_alias};")
         conn.execute(f"COPY FROM DATABASE {db_alias} TO memory;")
         conn.execute(f"DETACH {db_alias};")
     
@@ -91,9 +92,8 @@ class Benchmark:
         """
         # Install extension if not installed (uses custom path if provided)
         if self.config.tpch_extension_path is not None:
-            conn.execute(
-                f"INSTALL tpch FROM '{self.config.tpch_extension_path.parent}';"
-            )
+            escaped_path = _escape_sql_string(str(self.config.tpch_extension_path.parent))
+            conn.execute(f"INSTALL tpch FROM '{escaped_path}';")
         else:
             conn.execute("INSTALL tpch;")
         

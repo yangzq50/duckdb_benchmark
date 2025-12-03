@@ -9,6 +9,21 @@ import duckdb
 from duckdb_benchmark.config import BenchmarkConfig
 
 
+def _escape_sql_string(value: str) -> str:
+    """
+    Escape a string value for safe use in SQL.
+    
+    Replaces single quotes with escaped single quotes to prevent SQL injection.
+    
+    Args:
+        value: The string to escape
+        
+    Returns:
+        Escaped string safe for SQL interpolation
+    """
+    return value.replace("'", "''")
+
+
 def _get_db_filename(scale_factor: float) -> str:
     """
     Get the database filename with scale factor included.
@@ -60,9 +75,8 @@ class DataGenerator:
         """
         # Install extension if not installed (uses custom path if provided)
         if self.config.tpch_extension_path is not None:
-            conn.execute(
-                f"INSTALL tpch FROM '{self.config.tpch_extension_path.parent}';"
-            )
+            escaped_path = _escape_sql_string(str(self.config.tpch_extension_path.parent))
+            conn.execute(f"INSTALL tpch FROM '{escaped_path}';")
         else:
             conn.execute("INSTALL tpch;")
         
@@ -108,7 +122,8 @@ class DataGenerator:
             # Persist data to disk using ATTACH/COPY/DETACH pattern
             # Use a safe database alias (not "my_database")
             db_alias = "tpch_persist"
-            conn.execute(f"ATTACH '{db_path}' AS {db_alias};")
+            escaped_db_path = _escape_sql_string(str(db_path))
+            conn.execute(f"ATTACH '{escaped_db_path}' AS {db_alias};")
             conn.execute(f"COPY FROM DATABASE memory TO {db_alias};")
             conn.execute(f"DETACH {db_alias};")
             
