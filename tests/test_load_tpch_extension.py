@@ -14,7 +14,7 @@ from duckdb_benchmark.load_tpch_extension import (
     _get_extension_download_url,
     _get_platform,
     download_tpch_extension,
-    install_and_load_tpch,
+    load_tpch,
     load_tpch_extension_from_path,
 )
 
@@ -141,16 +141,16 @@ class TestDownloadTpchExtension:
             download_tpch_extension(extension_path)
 
 
-class TestInstallAndLoadTpch:
-    """Tests for install_and_load_tpch function."""
+class TestLoadTpch:
+    """Tests for load_tpch function."""
 
     def test_uses_bundled_extension_when_no_paths_provided(self) -> None:
         """Test that bundled extension is used when no paths provided."""
         conn = MagicMock()
 
-        install_and_load_tpch(conn)
+        load_tpch(conn)
 
-        # Should call INSTALL tpch; without a path
+        # Should call INSTALL tpch; and LOAD tpch;
         conn.execute.assert_any_call("INSTALL tpch;")
         conn.execute.assert_any_call("LOAD tpch;")
 
@@ -162,12 +162,11 @@ class TestInstallAndLoadTpch:
 
         conn = MagicMock()
 
-        install_and_load_tpch(conn, extension_path=extension_file)
+        load_tpch(conn, extension_path=extension_file)
 
-        # Should install from the custom path
-        expected_install = f"INSTALL tpch FROM '{extension_file.parent}';"
-        conn.execute.assert_any_call(expected_install)
-        conn.execute.assert_any_call("LOAD tpch;")
+        # Should load directly from the custom path
+        expected_load = f"LOAD '{extension_file}';"
+        conn.execute.assert_called_once_with(expected_load)
 
     def test_uses_default_path_when_data_path_provided(self, tmp_path: Path) -> None:
         """Test that default path within data_path is used."""
@@ -176,21 +175,35 @@ class TestInstallAndLoadTpch:
 
         conn = MagicMock()
 
-        install_and_load_tpch(conn, data_path=tmp_path)
+        load_tpch(conn, data_path=tmp_path)
 
-        # Should install from the default path
-        expected_install = f"INSTALL tpch FROM '{tmp_path}';"
-        conn.execute.assert_any_call(expected_install)
+        # Should load from the default path
+        expected_load = f"LOAD '{default_ext}';"
+        conn.execute.assert_called_once_with(expected_load)
 
-    def test_falls_back_to_bundled_when_default_not_exists(self, tmp_path: Path) -> None:
-        """Test fallback to bundled when default path doesn't exist."""
+    def test_downloads_when_default_not_exists(self, tmp_path: Path) -> None:
+        """Test download is called when default path doesn't exist."""
         conn = MagicMock()
 
         # data_path is provided but default extension file doesn't exist
-        install_and_load_tpch(conn, data_path=tmp_path)
+        with patch("duckdb_benchmark.load_tpch_extension.download_tpch_extension") as mock_download:
+            # Make download create the file
+            def create_file(path: Path) -> Path:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.touch()
+                return path
 
-        # Should fall back to INSTALL tpch;
-        conn.execute.assert_any_call("INSTALL tpch;")
+            mock_download.side_effect = create_file
+
+            load_tpch(conn, data_path=tmp_path)
+
+            # Should have called download
+            expected_path = tmp_path / "tpch.duckdb_extension"
+            mock_download.assert_called_once_with(expected_path)
+
+            # Should load from the path
+            expected_load = f"LOAD '{expected_path}';"
+            conn.execute.assert_called_once_with(expected_load)
 
     def test_extension_path_takes_precedence(self, tmp_path: Path) -> None:
         """Test that extension_path takes precedence over data_path default."""
@@ -205,11 +218,11 @@ class TestInstallAndLoadTpch:
 
         conn = MagicMock()
 
-        install_and_load_tpch(conn, extension_path=custom_ext, data_path=tmp_path)
+        load_tpch(conn, extension_path=custom_ext, data_path=tmp_path)
 
         # Should use the custom path, not the default
-        expected_install = f"INSTALL tpch FROM '{custom_dir}';"
-        conn.execute.assert_any_call(expected_install)
+        expected_load = f"LOAD '{custom_ext}';"
+        conn.execute.assert_called_once_with(expected_load)
 
 
 class TestLoadTpchExtensionFromPath:

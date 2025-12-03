@@ -151,18 +151,19 @@ def download_tpch_extension(
     return extension_path
 
 
-def install_and_load_tpch(
+def load_tpch(
     conn: duckdb.DuckDBPyConnection,
     extension_path: Path | None = None,
     data_path: Path | None = None,
 ) -> None:
     """
-    Install and load the TPC-H extension.
+    Load the TPC-H extension.
 
-    If extension_path is provided, installs from that path.
+    If extension_path is provided, downloads the extension if it doesn't exist
+    and loads it directly using LOAD 'path'.
     If extension_path is None but data_path is provided, uses the default path
     within data_path (data_path/tpch.duckdb_extension).
-    If neither is provided, uses the bundled DuckDB extension.
+    If neither is provided, uses INSTALL tpch; LOAD tpch;.
 
     Args:
         conn: DuckDB connection
@@ -170,22 +171,25 @@ def install_and_load_tpch(
         data_path: Optional data directory path for default extension location
 
     Raises:
-        duckdb.Error: If extension installation or loading fails
+        duckdb.Error: If extension loading fails
     """
     # Determine the effective extension path
     effective_path = extension_path
     if effective_path is None and data_path is not None:
         effective_path = _get_default_extension_path(data_path)
 
-    # Install extension (uses custom path if provided)
-    if effective_path is not None and effective_path.exists():
-        escaped_path = _escape_sql_string(str(effective_path.parent))
-        conn.execute(f"INSTALL tpch FROM '{escaped_path}';")
+    # Load extension based on path availability
+    if effective_path is not None:
+        # Download if file doesn't exist
+        if not effective_path.exists():
+            download_tpch_extension(effective_path)
+        # Load directly from path
+        escaped_path = _escape_sql_string(str(effective_path))
+        conn.execute(f"LOAD '{escaped_path}';")
     else:
+        # Use bundled extension: INSTALL + LOAD
         conn.execute("INSTALL tpch;")
-
-    # Load extension (always load)
-    conn.execute("LOAD tpch;")
+        conn.execute("LOAD tpch;")
 
 
 def load_tpch_extension_from_path(

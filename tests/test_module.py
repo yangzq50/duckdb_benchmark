@@ -6,8 +6,8 @@ from duckdb_benchmark import (
     BenchmarkConfig,
     DataGenerator,
     download_tpch_extension,
-    install_and_load_tpch,
     load_config,
+    load_tpch,
     load_tpch_extension_from_path,
 )
 
@@ -40,9 +40,9 @@ class TestModuleExports:
         """Test that download_tpch_extension is exported."""
         assert callable(download_tpch_extension)
 
-    def test_exports_install_and_load_tpch(self) -> None:
-        """Test that install_and_load_tpch is exported."""
-        assert callable(install_and_load_tpch)
+    def test_exports_load_tpch(self) -> None:
+        """Test that load_tpch is exported."""
+        assert callable(load_tpch)
 
     def test_exports_load_tpch_extension_from_path(self) -> None:
         """Test that load_tpch_extension_from_path is exported."""
@@ -57,7 +57,7 @@ class TestModuleExports:
             "DataGenerator",
             "Benchmark",
             "download_tpch_extension",
-            "install_and_load_tpch",
+            "load_tpch",
             "load_tpch_extension_from_path",
         ]
         for name in expected:
