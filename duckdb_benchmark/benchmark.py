@@ -14,7 +14,11 @@ from typing import Optional
 import duckdb
 
 from duckdb_benchmark.config import BenchmarkConfig
-from duckdb_benchmark.data_generator import _get_db_filename, _escape_sql_string
+from duckdb_benchmark.data_generator import (
+    _get_db_filename,
+    _escape_sql_string,
+    _format_scale_factor,
+)
 
 
 @dataclass
@@ -225,11 +229,7 @@ class Benchmark:
         
         # Create filename with timestamp and scale factor
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        sf = self.config.scale_factor
-        if sf == int(sf):
-            sf_str = str(int(sf))
-        else:
-            sf_str = str(sf).replace(".", "_")
+        sf_str = _format_scale_factor(self.config.scale_factor)
         
         output_file = output_dir / f"benchmark_sf{sf_str}_{timestamp}.json"
         

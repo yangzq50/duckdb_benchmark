@@ -40,13 +40,20 @@ class BenchmarkConfig:
         if self.tpch_extension_path is not None:
             self.tpch_extension_path = Path(self.tpch_extension_path)
         
+        # Validate types and values
+        if not isinstance(self.scale_factor, (int, float)):
+            raise TypeError("scale_factor must be a number")
         if self.scale_factor <= 0:
             raise ValueError("scale_factor must be positive")
+        if not isinstance(self.iterations, int):
+            raise TypeError("iterations must be an integer")
         if self.iterations <= 0:
             raise ValueError("iterations must be positive")
         if not self.queries:
             raise ValueError("queries list cannot be empty")
         for q in self.queries:
+            if not isinstance(q, int):
+                raise TypeError(f"query {q} must be an integer")
             if not 1 <= q <= 22:
                 raise ValueError(f"query {q} must be between 1 and 22")
         if self.tpch_extension_path is not None and not self.tpch_extension_path.exists():

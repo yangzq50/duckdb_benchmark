@@ -24,6 +24,26 @@ def _escape_sql_string(value: str) -> str:
     return value.replace("'", "''")
 
 
+def _format_scale_factor(scale_factor: float) -> str:
+    """
+    Format scale factor as a string suitable for filenames.
+    
+    Converts dots to underscores for fractional scale factors
+    (e.g., 0.1 -> '0_1', 1.0 -> '1').
+    
+    Args:
+        scale_factor: The TPC-H scale factor
+        
+    Returns:
+        Formatted string representation of scale factor
+    """
+    # Use is_integer() for cleaner float-to-integer detection
+    if float(scale_factor).is_integer():
+        return str(int(scale_factor))
+    else:
+        return str(scale_factor).replace(".", "_")
+
+
 def _get_db_filename(scale_factor: float) -> str:
     """
     Get the database filename with scale factor included.
@@ -34,12 +54,7 @@ def _get_db_filename(scale_factor: float) -> str:
     Returns:
         Database filename string like 'tpch_sf1.db'
     """
-    # Format sf to avoid issues with floating point (e.g., 0.1 -> 'sf0_1')
-    if scale_factor == int(scale_factor):
-        sf_str = str(int(scale_factor))
-    else:
-        sf_str = str(scale_factor).replace(".", "_")
-    return f"tpch_sf{sf_str}.db"
+    return f"tpch_sf{_format_scale_factor(scale_factor)}.db"
 
 
 class DataGenerator:
