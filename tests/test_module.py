@@ -3,7 +3,15 @@
 import pytest
 
 import duckdb_benchmark
-from duckdb_benchmark import BenchmarkConfig, load_config, DataGenerator, Benchmark
+from duckdb_benchmark import (
+    BenchmarkConfig,
+    load_config,
+    DataGenerator,
+    Benchmark,
+    download_tpch_extension,
+    install_and_load_tpch,
+    load_tpch_extension_from_path,
+)
 
 
 class TestModuleExports:
@@ -30,6 +38,18 @@ class TestModuleExports:
         """Test that Benchmark is exported."""
         assert Benchmark is not None
     
+    def test_exports_download_tpch_extension(self) -> None:
+        """Test that download_tpch_extension is exported."""
+        assert callable(download_tpch_extension)
+    
+    def test_exports_install_and_load_tpch(self) -> None:
+        """Test that install_and_load_tpch is exported."""
+        assert callable(install_and_load_tpch)
+    
+    def test_exports_load_tpch_extension_from_path(self) -> None:
+        """Test that load_tpch_extension_from_path is exported."""
+        assert callable(load_tpch_extension_from_path)
+    
     def test_all_exports_defined(self) -> None:
         """Test that __all__ contains expected exports."""
         expected = [
@@ -38,6 +58,9 @@ class TestModuleExports:
             "load_config",
             "DataGenerator",
             "Benchmark",
+            "download_tpch_extension",
+            "install_and_load_tpch",
+            "load_tpch_extension_from_path",
         ]
         for name in expected:
             assert name in duckdb_benchmark.__all__

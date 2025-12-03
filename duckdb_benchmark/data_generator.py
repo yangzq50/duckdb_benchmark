@@ -7,6 +7,7 @@ Provides TPC-H data generation logic using DuckDB's TPC-H extension.
 from pathlib import Path
 import duckdb
 from duckdb_benchmark.config import BenchmarkConfig
+from duckdb_benchmark.load_tpch_extension import install_and_load_tpch
 
 
 def _escape_sql_string(value: str) -> str:
@@ -88,15 +89,11 @@ class DataGenerator:
         Raises:
             duckdb.Error: If extension installation or loading fails
         """
-        # Install extension if not installed (uses custom path if provided)
-        if self.config.tpch_extension_path is not None:
-            escaped_path = _escape_sql_string(str(self.config.tpch_extension_path.parent))
-            conn.execute(f"INSTALL tpch FROM '{escaped_path}';")
-        else:
-            conn.execute("INSTALL tpch;")
-        
-        # Load extension (always load)
-        conn.execute("LOAD tpch;")
+        install_and_load_tpch(
+            conn,
+            extension_path=self.config.tpch_extension_path,
+            data_path=self.config.data_path,
+        )
     
     def generate(self) -> Path:
         """
