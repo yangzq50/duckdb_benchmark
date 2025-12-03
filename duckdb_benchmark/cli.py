@@ -9,10 +9,10 @@ import json
 import sys
 from pathlib import Path
 
-from duckdb_benchmark import __version__
-from duckdb_benchmark.benchmark import Benchmark
-from duckdb_benchmark.config import load_config
-from duckdb_benchmark.data_generator import DataGenerator
+from . import __version__
+from .benchmark import Benchmark
+from .config import load_config
+from .data_generator import DataGenerator
 
 
 def create_parser() -> argparse.ArgumentParser:

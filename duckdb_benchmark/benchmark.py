@@ -13,13 +13,13 @@ from typing import Any
 
 import duckdb
 
-from duckdb_benchmark.config import BenchmarkConfig
-from duckdb_benchmark.data_generator import (
+from .config import BenchmarkConfig
+from .data_generator import (
     _escape_sql_string,
     _format_scale_factor,
     _get_db_filename,
 )
-from duckdb_benchmark.load_tpch_extension import install_and_load_tpch
+from .load_tpch_extension import load_tpch_extension
 
 
 @dataclass
@@ -85,17 +85,17 @@ class Benchmark:
         conn.execute(f"COPY FROM DATABASE {db_alias} TO memory;")
         conn.execute(f"DETACH {db_alias};")
 
-    def _install_and_load_tpch(self, conn: duckdb.DuckDBPyConnection) -> None:
+    def _load_tpch_extension(self, conn: duckdb.DuckDBPyConnection) -> None:
         """
-        Install and load the TPC-H extension.
+        Load the TPC-H extension.
 
         Args:
             conn: DuckDB connection
 
         Raises:
-            duckdb.Error: If extension installation or loading fails
+            duckdb.Error: If extension loading fails
         """
-        install_and_load_tpch(
+        load_tpch_extension(
             conn,
             extension_path=self.config.tpch_extension_path,
             data_path=self.config.data_path,
@@ -187,8 +187,8 @@ class Benchmark:
         conn = duckdb.connect(":memory:")
 
         try:
-            # Install and load TPCH extension (needed for tpch_queries())
-            self._install_and_load_tpch(conn)
+            # Load TPCH extension (needed for tpch_queries())
+            self._load_tpch_extension(conn)
 
             # Load data into memory
             self._load_data(conn)

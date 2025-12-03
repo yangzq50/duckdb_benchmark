@@ -8,8 +8,8 @@ from pathlib import Path
 
 import duckdb
 
-from duckdb_benchmark.config import BenchmarkConfig
-from duckdb_benchmark.load_tpch_extension import install_and_load_tpch
+from .config import BenchmarkConfig
+from .load_tpch_extension import load_tpch_extension
 
 
 def _escape_sql_string(value: str) -> str:
@@ -81,17 +81,17 @@ class DataGenerator:
         """Get the path to the persistent database file."""
         return self.config.data_path / _get_db_filename(self.config.scale_factor)
 
-    def _install_and_load_tpch(self, conn: duckdb.DuckDBPyConnection) -> None:
+    def _load_tpch_extension(self, conn: duckdb.DuckDBPyConnection) -> None:
         """
-        Install and load the TPC-H extension.
+        Load the TPC-H extension.
 
         Args:
             conn: DuckDB connection
 
         Raises:
-            duckdb.Error: If extension installation or loading fails
+            duckdb.Error: If extension loading fails
         """
-        install_and_load_tpch(
+        load_tpch_extension(
             conn,
             extension_path=self.config.tpch_extension_path,
             data_path=self.config.data_path,
@@ -127,8 +127,8 @@ class DataGenerator:
         conn = duckdb.connect(":memory:")
 
         try:
-            # Install and load TPC-H extension
-            self._install_and_load_tpch(conn)
+            # Load TPC-H extension
+            self._load_tpch_extension(conn)
 
             # Generate TPC-H data in memory
             conn.execute(f"CALL dbgen(sf = {self.config.scale_factor});")
