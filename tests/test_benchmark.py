@@ -1,6 +1,7 @@
 """Tests for duckdb_benchmark.benchmark module."""
 
 import json
+import statistics
 from pathlib import Path
 
 import duckdb
@@ -159,3 +160,91 @@ class TestBenchmark:
         assert "summary" in data
         assert data["config"]["scale_factor"] == 0.01
         assert len(data["results"]) == 2
+
+    def test_compute_summary_includes_new_statistics(
+        self, config: BenchmarkConfig
+    ) -> None:
+        """Test that _compute_summary includes median, stdev, and variance."""
+        benchmark = Benchmark(config)
+
+        # Manually populate results to test summary computation
+        times = [100.0, 200.0, 150.0, 250.0, 175.0]
+        benchmark.results = [
+            BenchmarkResult(
+                query_number=1,
+                iteration=i + 1,
+                execution_time_ms=t,
+                row_count=10,
+                success=True,
+            )
+            for i, t in enumerate(times)
+        ]
+
+        summary = benchmark._compute_summary()
+
+        # Check that all new statistics are present
+        assert "query_1" in summary
+        query_summary = summary["query_1"]
+
+        # Check existing keys
+        assert "min_ms" in query_summary
+        assert "max_ms" in query_summary
+        assert "avg_ms" in query_summary
+        assert "iterations" in query_summary
+        assert "all_success" in query_summary
+
+        # Check new keys
+        assert "median_ms" in query_summary
+        assert "stdev_ms" in query_summary
+        assert "variance_ms" in query_summary
+
+        # Verify values are correct
+        assert query_summary["min_ms"] == 100.0
+        assert query_summary["max_ms"] == 250.0
+        assert query_summary["avg_ms"] == sum(times) / len(times)
+        assert query_summary["median_ms"] == statistics.median(times)
+        assert query_summary["stdev_ms"] == statistics.stdev(times)
+        assert query_summary["variance_ms"] == statistics.variance(times)
+        assert query_summary["iterations"] == 5
+        assert query_summary["all_success"] is True
+
+    def test_compute_summary_single_result(self, config: BenchmarkConfig) -> None:
+        """Test _compute_summary handles single result (stdev/variance should be 0)."""
+        benchmark = Benchmark(config)
+
+        # Single result
+        benchmark.results = [
+            BenchmarkResult(
+                query_number=1,
+                iteration=1,
+                execution_time_ms=100.0,
+                row_count=10,
+                success=True,
+            )
+        ]
+
+        summary = benchmark._compute_summary()
+        query_summary = summary["query_1"]
+
+        # With single result, stdev and variance should be 0.0
+        assert query_summary["stdev_ms"] == 0.0
+        assert query_summary["variance_ms"] == 0.0
+        assert query_summary["median_ms"] == 100.0
+
+    def test_compute_summary_no_results(self, config: BenchmarkConfig) -> None:
+        """Test _compute_summary handles no results (None values)."""
+        benchmark = Benchmark(config)
+        benchmark.results = []
+
+        summary = benchmark._compute_summary()
+        query_summary = summary["query_1"]
+
+        # With no results, all values should be None or False
+        assert query_summary["min_ms"] is None
+        assert query_summary["max_ms"] is None
+        assert query_summary["avg_ms"] is None
+        assert query_summary["median_ms"] is None
+        assert query_summary["stdev_ms"] is None
+        assert query_summary["variance_ms"] is None
+        assert query_summary["iterations"] == 0
+        assert query_summary["all_success"] is False

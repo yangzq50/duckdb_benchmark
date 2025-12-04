@@ -5,6 +5,7 @@ Provides TPC-H benchmarking logic using DuckDB.
 """
 
 import json
+import statistics
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -269,6 +270,9 @@ class Benchmark:
                     "min_ms": min(times),
                     "max_ms": max(times),
                     "avg_ms": sum(times) / len(times),
+                    "median_ms": statistics.median(times),
+                    "stdev_ms": statistics.stdev(times) if len(times) > 1 else 0.0,
+                    "variance_ms": statistics.variance(times) if len(times) > 1 else 0.0,
                     "iterations": len(times),
                     "all_success": all(r.success for r in query_results),
                 }
@@ -277,6 +281,9 @@ class Benchmark:
                     "min_ms": None,
                     "max_ms": None,
                     "avg_ms": None,
+                    "median_ms": None,
+                    "stdev_ms": None,
+                    "variance_ms": None,
                     "iterations": 0,
                     "all_success": False,
                 }
