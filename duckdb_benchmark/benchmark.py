@@ -32,15 +32,18 @@ class BenchmarkResult:
         query_number: TPC-H query number (1-22)
         iteration: Iteration number
         execution_time_ms: Query execution time in milliseconds
-        row_count: Number of rows returned
         success: Whether the query executed successfully
+        query_plan: Query execution plan from EXPLAIN ANALYZE
+        query_command: The executed query SQL with EXPLAIN ANALYZE prefix
         error: Error message if query failed
     """
+
     query_number: int
     iteration: int
     execution_time_ms: float
-    row_count: int
     success: bool
+    query_plan: str = ""
+    query_command: str = ""
     error: str | None = None
 
 
@@ -127,12 +130,11 @@ class Benchmark:
                     query_number=query_number,
                     iteration=iteration,
                     execution_time_ms=0.0,
-                    row_count=0,
                     success=False,
                     error=f"Query {query_number} not found in tpch_queries()",
                 )
 
-            query_sql = query_result[0]
+            query_sql = "EXPLAIN ANALYZE\n" + query_result[0]
 
             # Execute and time the query
             start_time = time.perf_counter()
@@ -142,12 +144,18 @@ class Benchmark:
 
             execution_time_ms = (end_time - start_time) * 1000
 
+            # Extract query_plan from the result (first row, second column)
+            query_plan = ""
+            if rows and len(rows) > 0 and len(rows[0]) > 1:
+                query_plan = rows[0][1]
+
             return BenchmarkResult(
                 query_number=query_number,
                 iteration=iteration,
                 execution_time_ms=execution_time_ms,
-                row_count=len(rows),
                 success=True,
+                query_plan=query_plan,
+                query_command=query_sql,
             )
 
         except Exception as e:
@@ -155,7 +163,6 @@ class Benchmark:
                 query_number=query_number,
                 iteration=iteration,
                 execution_time_ms=0.0,
-                row_count=0,
                 success=False,
                 error=str(e),
             )
@@ -177,8 +184,7 @@ class Benchmark:
         db_path = self._get_db_path()
         if not db_path.exists():
             raise FileNotFoundError(
-                f"Database file not found: {db_path}. "
-                "Run data generation first."
+                f"Database file not found: {db_path}. Run data generation first."
             )
 
         self.results = []
@@ -260,12 +266,15 @@ class Benchmark:
         # Group results by query number
         for query_number in self.config.queries:
             query_results = [
-                r for r in self.results
-                if r.query_number == query_number and r.success
+                r for r in self.results if r.query_number == query_number and r.success
             ]
 
             if query_results:
                 times = [r.execution_time_ms for r in query_results]
+                # Get query_command (should be same for all results of a query)
+                query_command = query_results[0].query_command
+                # Get the first query_plan
+                query_plan = query_results[0].query_plan
                 summary[f"query_{query_number}"] = {
                     "min_ms": min(times),
                     "max_ms": max(times),
@@ -275,6 +284,8 @@ class Benchmark:
                     "variance_ms": statistics.variance(times) if len(times) > 1 else 0.0,
                     "iterations": len(times),
                     "all_success": all(r.success for r in query_results),
+                    "query_command": query_command,
+                    "query_plan": query_plan,
                 }
             else:
                 summary[f"query_{query_number}"] = {
@@ -286,6 +297,8 @@ class Benchmark:
                     "variance_ms": None,
                     "iterations": 0,
                     "all_success": False,
+                    "query_command": None,
+                    "query_plan": None,
                 }
 
         return summary

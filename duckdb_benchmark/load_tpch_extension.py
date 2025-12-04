@@ -96,10 +96,7 @@ def _get_extension_download_url(
     if platform is None:
         platform = _get_platform()
 
-    return (
-        f"http://extensions.duckdb.org/v{duckdb_version}/"
-        f"{platform}/tpch.duckdb_extension.gz"
-    )
+    return f"http://extensions.duckdb.org/v{duckdb_version}/{platform}/tpch.duckdb_extension.gz"
 
 
 def _download_tpch_extension(
