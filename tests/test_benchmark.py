@@ -37,15 +37,17 @@ class TestBenchmarkResult:
             query_number=1,
             iteration=1,
             execution_time_ms=100.5,
-            row_count=10,
             success=True,
+            query_plan="test plan",
+            query_command="EXPLAIN ANALYZE\nSELECT * FROM table",
         )
 
         assert result.query_number == 1
         assert result.iteration == 1
         assert result.execution_time_ms == 100.5
-        assert result.row_count == 10
         assert result.success is True
+        assert result.query_plan == "test plan"
+        assert result.query_command == "EXPLAIN ANALYZE\nSELECT * FROM table"
         assert result.error is None
 
     def test_result_with_error(self) -> None:
@@ -54,13 +56,14 @@ class TestBenchmarkResult:
             query_number=1,
             iteration=1,
             execution_time_ms=0.0,
-            row_count=0,
             success=False,
             error="Query timeout",
         )
 
         assert result.success is False
         assert result.error == "Query timeout"
+        assert result.query_plan == ""
+        assert result.query_command == ""
 
 
 class TestBenchmark:
@@ -92,9 +95,7 @@ class TestBenchmark:
         assert benchmark.results == []
 
     @pytest.mark.skipif(not TPCH_AVAILABLE, reason="TPCH extension not available")
-    def test_run_raises_file_not_found_without_data(
-        self, config: BenchmarkConfig
-    ) -> None:
+    def test_run_raises_file_not_found_without_data(self, config: BenchmarkConfig) -> None:
         """Test run raises FileNotFoundError when data doesn't exist."""
         benchmark = Benchmark(config)
 
@@ -122,9 +123,7 @@ class TestBenchmark:
 
         assert len(benchmark.results) == 2
 
-    def test_save_results_raises_without_results(
-        self, config: BenchmarkConfig
-    ) -> None:
+    def test_save_results_raises_without_results(self, config: BenchmarkConfig) -> None:
         """Test save_results raises ValueError when no results."""
         benchmark = Benchmark(config)
 
@@ -132,9 +131,7 @@ class TestBenchmark:
             benchmark.save_results()
 
     @pytest.mark.skipif(not TPCH_AVAILABLE, reason="TPCH extension not available")
-    def test_save_results_creates_file(
-        self, config_with_data: BenchmarkConfig
-    ) -> None:
+    def test_save_results_creates_file(self, config_with_data: BenchmarkConfig) -> None:
         """Test save_results creates output file."""
         benchmark = Benchmark(config_with_data)
         benchmark.run()
@@ -161,21 +158,22 @@ class TestBenchmark:
         assert data["config"]["scale_factor"] == 0.01
         assert len(data["results"]) == 2
 
-    def test_compute_summary_includes_new_statistics(
-        self, config: BenchmarkConfig
-    ) -> None:
-        """Test that _compute_summary includes median, stdev, and variance."""
+    def test_compute_summary_includes_new_statistics(self, config: BenchmarkConfig) -> None:
+        """Test that _compute_summary includes median, stdev, variance, query_command, and query_plan."""
         benchmark = Benchmark(config)
 
         # Manually populate results to test summary computation
         times = [100.0, 200.0, 150.0, 250.0, 175.0]
+        query_command = "EXPLAIN ANALYZE\nSELECT * FROM test"
+        query_plan = "test plan"
         benchmark.results = [
             BenchmarkResult(
                 query_number=1,
                 iteration=i + 1,
                 execution_time_ms=t,
-                row_count=10,
                 success=True,
+                query_plan=query_plan if i == 0 else f"plan {i}",  # Different plans
+                query_command=query_command,
             )
             for i, t in enumerate(times)
         ]
@@ -197,6 +195,8 @@ class TestBenchmark:
         assert "median_ms" in query_summary
         assert "stdev_ms" in query_summary
         assert "variance_ms" in query_summary
+        assert "query_command" in query_summary
+        assert "query_plan" in query_summary
 
         # Verify values are correct
         assert query_summary["min_ms"] == 100.0
@@ -207,6 +207,10 @@ class TestBenchmark:
         assert query_summary["variance_ms"] == statistics.variance(times)
         assert query_summary["iterations"] == 5
         assert query_summary["all_success"] is True
+        # Query command should be the same for all results (deduplicated)
+        assert query_summary["query_command"] == query_command
+        # Query plan should be the first one only
+        assert query_summary["query_plan"] == query_plan
 
     def test_compute_summary_single_result(self, config: BenchmarkConfig) -> None:
         """Test _compute_summary handles single result (stdev/variance should be 0)."""
@@ -218,8 +222,9 @@ class TestBenchmark:
                 query_number=1,
                 iteration=1,
                 execution_time_ms=100.0,
-                row_count=10,
                 success=True,
+                query_plan="single plan",
+                query_command="EXPLAIN ANALYZE\nSELECT 1",
             )
         ]
 
@@ -230,6 +235,8 @@ class TestBenchmark:
         assert query_summary["stdev_ms"] == 0.0
         assert query_summary["variance_ms"] == 0.0
         assert query_summary["median_ms"] == 100.0
+        assert query_summary["query_command"] == "EXPLAIN ANALYZE\nSELECT 1"
+        assert query_summary["query_plan"] == "single plan"
 
     def test_compute_summary_no_results(self, config: BenchmarkConfig) -> None:
         """Test _compute_summary handles no results (None values)."""
@@ -248,3 +255,5 @@ class TestBenchmark:
         assert query_summary["variance_ms"] is None
         assert query_summary["iterations"] == 0
         assert query_summary["all_success"] is False
+        assert query_summary["query_command"] is None
+        assert query_summary["query_plan"] is None

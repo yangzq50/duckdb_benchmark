@@ -95,6 +95,7 @@ class TestDownloadTpchExtension:
         # Mock urlretrieve to create the gz file
         test_content = b"test extension content"
         with patch("urllib.request.urlretrieve") as mock_retrieve:
+
             def create_gz_file(url: str, path: str) -> None:
                 with gzip.open(path, "wb") as f:
                     f.write(test_content)
@@ -115,6 +116,7 @@ class TestDownloadTpchExtension:
         test_content = b"test content"
 
         with patch("urllib.request.urlretrieve") as mock_retrieve:
+
             def create_gz_file(url: str, path: str) -> None:
                 Path(path).parent.mkdir(parents=True, exist_ok=True)
                 with gzip.open(path, "wb") as f:
@@ -133,6 +135,7 @@ class TestDownloadTpchExtension:
         test_content = b"test"
 
         with patch("urllib.request.urlretrieve") as mock_retrieve:
+
             def create_gz_file(url: str, path: str) -> None:
                 assert f"v{duckdb.__version__}" in url
                 Path(path).parent.mkdir(parents=True, exist_ok=True)

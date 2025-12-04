@@ -60,16 +60,12 @@ class TestDataGenerator:
         generator = DataGenerator(config)
         assert generator.config == config
 
-    def test_data_exists_returns_false_for_empty_path(
-        self, config: BenchmarkConfig
-    ) -> None:
+    def test_data_exists_returns_false_for_empty_path(self, config: BenchmarkConfig) -> None:
         """Test data_exists returns False when database file doesn't exist."""
         generator = DataGenerator(config)
         assert generator.data_exists() is False
 
-    def test_data_exists_returns_true_when_db_exists(
-        self, config: BenchmarkConfig
-    ) -> None:
+    def test_data_exists_returns_true_when_db_exists(self, config: BenchmarkConfig) -> None:
         """Test data_exists returns True when database file exists."""
         config.data_path.mkdir(parents=True)
         db_path = config.data_path / _get_db_filename(config.scale_factor)

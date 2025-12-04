@@ -25,6 +25,7 @@ class BenchmarkConfig:
         queries: List of TPC-H query numbers to run (1-22)
         tpch_extension_path: Optional path to TPCH extension file; if None, uses bundled extension
     """
+
     scale_factor: float
     data_path: Path
     output_path: Path
